@@ -8,9 +8,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -42,6 +44,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         val result = decodeAll(input)
+        val viewmodel: DecodeViewModel = DecodeViewModel()
 
         setContent {
             DoubleDecodeKeyTheme {
@@ -75,36 +78,13 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
-                        Text(
-                            text = "Result:",
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding( 10.dp),
-                            fontWeight = FontWeight.Bold,
-                            fontStyle = FontStyle.Italic
-                        )
                         Column(
                             modifier = Modifier
-                        ) {
-                            when {
-                                // Failed
-                                result.isFailure -> {
-                                    ErrorText(
-                                        message = result.exceptionOrNull()?.message
-                                            ?: "Unknown error"
-                                    )
-                                }
-                                // Success
-                                result.isSuccess -> {
-                                    val data = result.getOrThrow()
-                                    DecodeIntermediate(data.instruction, modifier = Modifier)
-                                    DecodeKey(data.key, modifier = Modifier)
-                                }
-                            }
+                                .padding(16.dp)) {
+                            DecodeScreen(input,viewmodel,modifier = Modifier)
                         }
 
                     }
-
                 }
             }
         }
@@ -184,6 +164,56 @@ class MainActivity : ComponentActivity() {
         )
     }
 
+}
+
+@Composable
+fun DecodeScreen(input:String, viewModel: DecodeViewModel, modifier: Modifier) {
+    Column(modifier = Modifier) {
+        Row {
+            Button(
+                onClick = { viewModel.runNextStep(input) },
+                enabled = viewModel.step != DecodeStep.DONE && viewModel.step != DecodeStep.ERROR
+            ) {
+                Text("Next step")
+            }
+
+            Spacer(Modifier.width(8.dp))
+
+            Button(
+                onClick = { viewModel.runAll(input) },
+                enabled = viewModel.step != DecodeStep.DONE && viewModel.step != DecodeStep.ERROR
+            ) {
+                Text("Run all")
+            }
+            Spacer(Modifier.width(8.dp))
+            Button(
+                onClick = { viewModel.reset()},
+                enabled = viewModel.step != DecodeStep.INIT) {
+                Text("Reset")
+            }
+        }
+
+        Text(
+            text = "Result:",
+            modifier = Modifier
+                .fillMaxWidth(),
+            fontWeight = FontWeight.Bold,
+            fontStyle = FontStyle.Italic
+        )
+
+        viewModel.error?.let {
+            Text(text = it, color = Color.Red)
+        }
+        if (viewModel.instruction.isNotEmpty()) {
+            Text("- Intermediate Result (after decode): ${viewModel.instruction}")
+        }
+        if (viewModel.cipherText.isNotEmpty()) {
+            Text("- Cipher text: ${viewModel.cipherText}")
+        }
+        if (viewModel.key.isNotEmpty()) {
+            Text("- Decoded KEY (final): ${viewModel.key}")
+        }
+    }
 }
 
 @Composable
